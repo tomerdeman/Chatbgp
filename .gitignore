@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.pyd
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+*.DS_Store
+
+# Data Files (LARGE - use Git LFS or separate storage)
+*.duckdb
+*.pkl.gz
+*.pkl
+radix_*.pkl.gz
+RAG/Data/rfc_vectorstore/
+RAG/rag_framework/bgp_rib_snapshot.duckdb
+bgp_rib_snapshot.duckdb
+
+# Test outputs and caches
+test_cache/
+entity_extraction_cache/
+*.json
+complete_pipeline_results.json
+comprehensive_comparison_results.json
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# Large CSV/data files (optional)
+# *.csv
+# pybgstream/*.csv
+
+# Visualizations (can regenerate)
+visualizations/
+pipeline_timing_visualizations/
+*.png
+
+# Conda/package manager
+.conda/
+
+# Entity extraction benchmarks
+entity_extraction_benchmark_*.csv
+

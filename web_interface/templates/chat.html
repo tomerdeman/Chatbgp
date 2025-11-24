@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BGP Analysis Chat</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: calc(100vh - 180px);
+        }
+        .message {
+            max-width: 85%;
+            margin: 12px;
+            padding: 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+        }
+        .user-message {
+            background-color: #e2e8f0;
+            margin-left: auto;
+            color: #1a202c;
+        }
+        .bot-message {
+            background-color: #2563eb;
+            color: white;
+            margin-right: auto;
+        }
+        .example-query {
+            transition: all 0.3s ease;
+        }
+        .example-query:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .flap-analysis {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            margin-top: 12px;
+            padding: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .bot-message strong {
+            color: #bfdbfe;
+            font-weight: 600;
+        }
+        .bot-message ul {
+            margin-left: 1rem;
+        }
+        .bot-message li {
+            margin: 0.5rem 0;
+        }
+        /* Improve section spacing */
+        .bot-message div + div {
+            margin-top: 0.75rem;
+        }
+        /* Make links stand out */
+        .bot-message a {
+            color: #93c5fd;
+            text-decoration: underline;
+        }
+        /* Highlight important information */
+        .bot-message .highlight {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">BGP Analysis Chat</h1>
+        
+        <!-- Example Queries -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-3">Example Queries:</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for query in example_queries %}
+                <div class="example-query bg-white p-4 rounded-lg shadow cursor-pointer hover:bg-blue-50"
+                     onclick="useExample('{{ query }}')">
+                    {{ query }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="bg-white rounded-lg shadow-lg p-4">
+            <div id="chat-messages" class="chat-container overflow-y-auto mb-4">
+                <div class="bot-message message">
+                    Hello! I can help you analyze BGP routing information. Try asking about route flaps,
+                    current BGP state, or use one of the example queries above.
+                </div>
+            </div>
+
+            <!-- Input Form -->
+            <form id="chat-form" class="flex gap-2">
+                <input type="text" id="message-input"
+                       class="flex-grow p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                       placeholder="Type your question here...">
+                <button type="submit"
+                        class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    Send
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+
+        function useExample(query) {
+            messageInput.value = query;
+            messageInput.focus();
+        }
+
+        function formatBGPResponse(text) {
+            // Format section headers (text between **)
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-blue-800">$1</strong>');
+            
+            // Format sections with ### as headers
+            text = text.replace(/###\s*(.*?)(?=###|$)/g, '<div class="mt-3 mb-2"><strong class="text-lg text-blue-900">$1</strong></div>');
+            
+            // Convert dashes at start of lines to bullet points
+            text = text.replace(/^-\s*(.*?)$/gm, '<li class="ml-4">$1</li>');
+            
+            // Wrap bullet points in ul
+            text = text.replace(/<li.*?<\/li>/gs, '<ul class="list-disc mt-2 mb-2">$&</ul>');
+            
+            // Add spacing between sections
+            text = text.replace(/\n\n/g, '<div class="mt-3"></div>');
+            
+            return text;
+        }
+
+        function addMessage(message, isUser = false, isFormatted = false) {
+            const div = document.createElement('div');
+            div.className = isUser ? 'user-message message' : 'bot-message message';
+            
+            if (isFormatted) {
+                div.innerHTML = message;
+            } else {
+                div.textContent = message;
+            }
+            
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function formatFlapAnalysis(flap) {
+            if (!flap) return '';
+            return `
+                <div class="flap-analysis text-gray-800">
+                    <div class="font-bold text-blue-800 mb-2">Route Flap Analysis:</div>
+                    <ul class="list-disc ml-4 space-y-1">
+                        <li>Flaps Detected: ${flap.flap_detected}</li>
+                        <li>Transitions: ${flap.transition_count}</li>
+                        <li>Severity: <span class="${getSeverityClass(flap.severity)}">${flap.severity}</span></li>
+                        ${flap.pattern_analysis ? `<li>Pattern: ${flap.pattern_analysis}</li>` : ''}
+                        ${flap.rapid_transitions ? `<li>Rapid Transitions: ${flap.rapid_transitions}</li>` : ''}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function getSeverityClass(severity) {
+            switch (severity?.toLowerCase()) {
+                case 'high':
+                    return 'font-bold text-red-600';
+                case 'medium':
+                    return 'font-bold text-yellow-600';
+                case 'low':
+                    return 'font-bold text-orange-600';
+                default:
+                    return 'font-bold text-green-600';
+            }
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, true);
+            messageInput.value = '';
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `message=${encodeURIComponent(message)}`
+                });
+
+                const data = await response.json();
+                
+                // Create bot response div
+                const botDiv = document.createElement('div');
+                botDiv.className = 'bot-message message';
+                
+                // Format and add main answer
+                const formattedAnswer = formatBGPResponse(data.answer);
+                botDiv.innerHTML = `<div class="text-white">${formattedAnswer}</div>`;
+                
+                // Add flap analysis if available
+                if (data.flap_analysis) {
+                    const flapDiv = document.createElement('div');
+                    flapDiv.innerHTML = formatFlapAnalysis(data.flap_analysis);
+                    botDiv.appendChild(flapDiv);
+                }
+                
+                chatMessages.appendChild(botDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            } catch (error) {
+                addMessage('Sorry, there was an error processing your request. Please try again.');
+            }
+        });
+    </script>
+</body>
+</html> 
